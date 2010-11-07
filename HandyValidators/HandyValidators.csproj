@@ -44,6 +44,7 @@
     <Reference Include="System.Web" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CheckBoxListValidator.cs" />
     <Compile Include="LengthValidator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RequireCheckedValidator.cs" />

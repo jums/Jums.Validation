@@ -10,26 +10,27 @@ using System.Web.UI.WebControls;
 namespace Jums.Validation.HandyValidators
 {
     /// <summary>
-    /// Validates that the target text input controls text length is within  given limits.
+    /// Validates that the target CheckBoxList control has proper amoutn of checked items.
     /// </summary>
     /// <remarks>
     /// Unlike standard Web Forms validators, this has dynamic display, focus on error and "error" css class by default.
     /// </remarks>
-    [ToolboxData("<{0}:LengthValidator runat=server></{0}:LengthValidator>")]
-    public class LengthValidator : BaseValidator
+    [ToolboxData("<{0}:CheckBoxListValidator runat=server></{0}:CheckBoxListValidator>")]
+    public class CheckBoxListValidator : BaseValidator
     {
         /// <summary>
-        /// Minimum value string length. 0 = no limit.
+        /// Minimum amount of items checked.
         /// </summary>
         [DefaultValue(0)]
         [Category("Handy")]
-        public int Min {
+        public int Min
+        {
             get { return (int)(this.ViewState["Min"] ?? 0); }
             set { this.ViewState["Min"] = value; }
         }
-        
+
         /// <summary>
-        /// Maximum value string length. 0 = no limit.
+        /// Maximum amount of items checked.
         /// </summary>
         [DefaultValue(0)]
         [Category("Handy")]
@@ -39,7 +40,7 @@ namespace Jums.Validation.HandyValidators
             set { this.ViewState["Max"] = value; }
         }
 
-        public LengthValidator() : base()
+        public CheckBoxListValidator() : base()
         {
             this.CssClass = "error";
             this.Display = ValidatorDisplay.Dynamic;
@@ -53,60 +54,82 @@ namespace Jums.Validation.HandyValidators
             if (this.EnableClientScript && this.DetermineRenderUplevel())
             {
                 string javascriptValidationFunction = CreateJavaScript();
-                Page.ClientScript.RegisterExpandoAttribute(this.ClientID, "evaluationfunction", "HandyCheckLength");
+                Page.ClientScript.RegisterExpandoAttribute(this.ClientID, "evaluationfunction", "HandyCheckIfListChecked");
                 Page.ClientScript.RegisterExpandoAttribute(this.ClientID, "minimum", this.Min.ToString());
                 Page.ClientScript.RegisterExpandoAttribute(this.ClientID, "maximum", this.Max.ToString());
                 Page.ClientScript.RegisterClientScriptBlock(this.GetType(), "JSScript", javascriptValidationFunction);
             }
+            
         }
 
         protected string CreateJavaScript()
         {
             return @"
 <script type=""text/javascript"">
-    function HandyCheckLength(validator){
-        var value = ValidatorTrim(ValidatorGetValue(validator.controltovalidate));
-        if (value.length == 0) return true;
-        if (validator.minimum > 0 && value.length < validator.minimum) return false;
-        if (validator.maximum > 0 && value.length > validator.maximum) return false;
+    function HandyCheckIfListChecked(validator){
+        var checkBoxList = document.getElementById(validator.controltovalidate);
+        var checkBoxes = checkBoxList.getElementsByTagName(""input"");
+        var amount = 0;
+
+        for(var i=0; i<checkBoxes.length; i++){
+            if(checkBoxes.item(i).checked){
+                amount++;
+            }
+        }
+
+        if (validator.minimum > 0 && amount < validator.minimum) return false;
+        if (validator.maximum > 0 && amount > validator.maximum) return false;
         return true;
     }
 </script>";
+
         }
 
         protected override bool ControlPropertiesValid()
         {
-            IEditableTextControl ctrl = FindControl(ControlToValidate) as IEditableTextControl;
+            Control ctrl = this.FindControl(ControlToValidate) as CheckBoxList;
             return (ctrl != null);
         }
 
         protected override bool EvaluateIsValid()
         {
-            return this.CheckInputLength();
+            return this.CheckIfItemIsChecked();
         }
 
-        protected bool CheckInputLength()
+        protected bool CheckIfItemIsChecked()
         {
-            IEditableTextControl ctrl = ((IEditableTextControl)this.FindControl(this.ControlToValidate));
-            string value = (ctrl.Text ?? "").Trim();
+            CheckBoxList checkboxList = ((CheckBoxList)this.FindControl(this.ControlToValidate));
+            int amount = CountCheckedItems(checkboxList);
 
-            if (this.Min > 0)
+            if (amount < this.Min)
             {
-                if (value.Length < this.Min)
-                {
-                    return false;
-                }
+                return false;
             }
 
             if (this.Max > 0)
             {
-                if (value.Length > this.Max)
+                if (amount > this.Max)
                 {
                     return false;
                 }
             }
 
             return true;
+        }
+
+        private static int CountCheckedItems(CheckBoxList checkboxList)
+        {
+            int amount = 0;
+
+            foreach (ListItem listItem in checkboxList.Items)
+            {
+                if (listItem.Selected == true)
+                {
+                    amount++;
+                }
+            }
+
+            return amount;
         }
     }
 }
